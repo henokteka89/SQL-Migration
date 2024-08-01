@@ -1,16 +1,24 @@
-3If you see permission issue while installing: use :
+#If you see permission issue while installing: use :
 Set-ExecutionPolicy Unrestricted
 
+#Importing from the website https://dbatools.io/download/
+Install-Module dbatools or Install-Module dbatools -Scope CurrentUser
+
+#importing the module using offline (find it on https://blog.netnerds.net/2023/04/offline-install-of-dbatools-and-dbatools-library/)
 Import-Module "\dbatools.library"
 Import-Module "\dbatools"
 
--- CHeck disk size on a server
+# Certificate chain not trusted https://vladdba.com/2023/07/29/fix-certificate-authority-that-is-not-trusted-when-using-dbatools/
+-- To trust self-signed server certificate: (this will be enough)
+Set-DbatoolsConfig -FullName sql.connection.trustcert -Value $true
+-- To set encryption to false altogether:
+Set-DbatoolsConfig -FullName sql.connection.encrypt -Value $false
 
+# Usage
+-- Check disk size on a server
 Get-dbadiskspace -computername "prodoltp"
 
----For Migration
-
-Copy-SqlLogin -Source “Server name”-Destination “Server name”-Force
+---For MigCopy-SqlLogin -Source “Server name”-Destination “Server name”-Force
 Sync-SqlLoginPermissions -Source “Server name”-Destination “Server name”
 Copy-SqlJob -Source “Server name”-Destination “Server name”-Force
 Copy-SqlOperator -Source “Server name”-Destination “Server name”-Force
