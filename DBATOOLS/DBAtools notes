@@ -1,0 +1,20 @@
+3If you see permission issue while installing: use :
+Set-ExecutionPolicy Unrestricted
+
+Import-Module "\dbatools.library"
+Import-Module "\dbatools"
+
+-- CHeck disk size on a server
+
+Get-dbadiskspace -computername "prodoltp"
+
+---For Migration
+
+Copy-SqlLogin -Source “Server name”-Destination “Server name”-Force
+Sync-SqlLoginPermissions -Source “Server name”-Destination “Server name”
+Copy-SqlJob -Source “Server name”-Destination “Server name”-Force
+Copy-SqlOperator -Source “Server name”-Destination “Server name”-Force
+Copy-SqlAlert -Source “Server name”-Destination “Server name”-Force
+Copy-SqlDatabaseMail -Source “Server name”-Destination “Server name” -Force
+Copy-SqlLinkedServer -Source “Server name”-Destination “Server name”–Force
+Copy-SqlSysDbUserObjects -Source “Server name”-Destination “Server name.”
