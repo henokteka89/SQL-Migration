@@ -1,0 +1,41 @@
+DECLARE @dbName NVARCHAR(128)
+DECLARE @sql NVARCHAR(MAX)
+
+-- Initialize a table to store the generated SQL commands
+IF OBJECT_ID('tempdb..#Commands') IS NOT NULL
+    DROP TABLE #Commands
+
+CREATE TABLE #Commands (
+    Command NVARCHAR(MAX)
+)
+
+-- Cursor to iterate over all user databases
+DECLARE db_cursor CURSOR FOR
+SELECT name
+FROM sys.databases
+WHERE database_id > 4 -- Exclude system databases
+
+OPEN db_cursor
+FETCH NEXT FROM db_cursor INTO @dbName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Build the SQL command to set the database to offline
+    SET @sql = 'ALTER DATABASE [' + @dbName + '] SET OFFLINE WITH NO_WAIT;'
+
+    -- Insert the command into the temporary table
+    INSERT INTO #Commands (Command)
+    VALUES (@sql)
+
+    FETCH NEXT FROM db_cursor INTO @dbName
+END
+
+CLOSE db_cursor
+DEALLOCATE db_cursor
+
+-- Select the generated commands
+SELECT Command
+FROM #Commands
+
+-- Optional: Drop the temporary table
+-- DROP TABLE #Commands
