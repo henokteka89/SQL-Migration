@@ -60,7 +60,7 @@ $migrateDbSplat = @{
     SharedPath       = 'B:\migration'
     SetSourceOffline = $true #you can check this. this will turn DBs offline after the Backup restore. 
 }
-Copy-DbaDatabase @migrateDbSplat
+Copy-DbaDatabase @migrateDbSplat  #-ReuseSourceFolderStructure (use this to override the default data/log directory and and place the databases in the same directory as the source) 
 
 ## upgrade compat level & check all is ok
 $compatSplat = @{
