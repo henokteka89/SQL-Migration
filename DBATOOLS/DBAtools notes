@@ -14,6 +14,9 @@ Set-DbatoolsConfig -FullName sql.connection.trustcert -Value $true
 -- To set encryption to false altogether:
 Set-DbatoolsConfig -FullName sql.connection.encrypt -Value $false
 
+# Output in grid view 
+| Out-GridView e.g. Get-DbaDbSpace -SqlInstance localhost | Out-GridView
+
 # Usage
 -- Check disk size on a server
 Get-dbadiskspace -computername "prodoltp"
