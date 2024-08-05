@@ -1,0 +1,63 @@
+Inspired by: https://jesspomfret.com/dbatools-repl-setup/
+Step 1: Setup Distributor and Publisher (on the sender end)
+#-- In most cases distributor and publisher is a same server, but if high throughput is required, you can offload distributor to another server. Here Both are the same server. 
+# -- Enable-DbaReplDistributor and Enable-DbaReplPublishing
+ 
+  # A. Configure a server a distributor 
+Enable-DbaReplDistributor -SqlInstance abc  #This creates the "distribution" database
+
+  # B. Configure a server a Publisher 
+Enable-DbaReplPublishing -SqlInstance abc
+
+# -- All is set to create publications, articles and subscriptions. The focus here is Transactional Replication
+
+  Step 2: Create Publication and Article 
+    
+# A. Create a transactional publication (New-DbaReplPublication) 
+# (My server is hek, the database for publication is stackoverflow2013, the name of the publication is HekStPub, the type is transactional replication)
+$addpublication = @{
+    SqlInstance = 'hek'
+    Database    = 'Stackoverflow2013'
+    Name        = 'HekStPub'
+    Type        = 'Transactional'
+}
+New-DbaReplPublication @addpublication
+
+
+# B. Create an Article next Add-DbaReplArticle
+  $addarticle = @{
+    SqlInstance = 'hek'
+    Database    = 'Stackoverflow2013'
+    Publication = 'HekStPub'
+    Schema      = 'dbo'
+    Name        = 'Posts'
+    Filter      = "CreationDate >= '2012.12.12'"  #Filters the table and publishes only those after this date. Filter can be ignored. 
+    }
+Add-DbaReplArticle @addarticle
+
+Step 3. Add a Subsctiption on the reciepient end  
+
+#  Add a Subscription (New-DbaReplSubscription)
+# My server is hek2, the publication name and database name are created above in hek server (HekStPub and Stackoverflow2013)
+  # It is better to create the database ahead of time (recommended). If it is not created, dbatool will handle that.
+$subcription = @{
+    SqlInstance           = 'hek'
+    Database              = 'Stackoverflow2013'
+    SubscriberSqlInstance = 'hek2'
+    SubscriptionDatabase  = 'Stackoverflow2013'
+    PublicationName       = 'HekStPub'
+    Type                  = 'Push'
+}
+New-DbaReplSubscription @subcription
+# To confirm if the subscription is created as expected use Get-DbaReplSubscription -SqlInstance hek.
+
+Step 4. Finalizing ..Run the Snapshot Agent..back to the sender server
+  #At this point all agent jobs are created. 
+  
+  #If this is the only repl-snapshot run the below
+Get-DbaAgentJob -SqlInstance sql1 -Category repl-snapshot | Start-DbaAgentJob
+  
+  #If there are multiple publications, modify -Category with the proper name or manually run the snapshot job (HekStPub-...)
+
+# Keep testing by inserting new values. 
+  
