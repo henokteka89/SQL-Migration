@@ -1,15 +1,15 @@
 Inspired by: https://jesspomfret.com/dbatools-repl-setup/
 Step 1: Setup Distributor and Publisher (on the sender end)
-#-- In most cases distributor and publisher is a same server, but if high throughput is required, you can offload distributor to another server. Here Both are the same server. 
+#-- In most cases, the distributor and publisher are the same server, but if high throughput is required, you can offload the distributor to another server. Here Both are on the same server. 
 # -- Enable-DbaReplDistributor and Enable-DbaReplPublishing
  
-  # A. Configure a server a distributor 
-Enable-DbaReplDistributor -SqlInstance abc  #This creates the "distribution" database
+  # A. Configure a server for a distributor 
+Enable-DbaReplDistributor -SqlInstance ABC  #This creates the "distribution" database
 
   # B. Configure a server a Publisher 
-Enable-DbaReplPublishing -SqlInstance abc
+Enable-DbaReplPublishing -SqlInstance ABC
 
-# -- All is set to create publications, articles and subscriptions. The focus here is Transactional Replication
+# -- All is set to create publications, articles, and subscriptions. The focus here is Transactional Replication
 
   Step 2: Create Publication and Article 
     
@@ -40,7 +40,7 @@ Step 3. Add a Subsctiption on the reciepient end
 #  Add a Subscription (New-DbaReplSubscription)
 # My server is hek2, the publication name and database name are created above in hek server (HekStPub and Stackoverflow2013)
   # It is better to create the database ahead of time (recommended). If it is not created, dbatool will handle that.
-$subcription = @{
+$subscription = @{
     SqlInstance           = 'hek'
     Database              = 'Stackoverflow2013'
     SubscriberSqlInstance = 'hek2'
@@ -48,16 +48,18 @@ $subcription = @{
     PublicationName       = 'HekStPub'
     Type                  = 'Push'
 }
-New-DbaReplSubscription @subcription
+New-DbaReplSubscription @subscription
 # To confirm if the subscription is created as expected use Get-DbaReplSubscription -SqlInstance hek.
 
 Step 4. Finalizing ..Run the Snapshot Agent..back to the sender server
   #At this point all agent jobs are created. 
   
   #If this is the only repl-snapshot run the below
-Get-DbaAgentJob -SqlInstance sql1 -Category repl-snapshot | Start-DbaAgentJob
+# Get-DbaAgentJob -SqlInstance sql1 -Category repl-snapshot | Start-DbaAgentJob
   
-  #If there are multiple publications, modify -Category with the proper name or manually run the snapshot job (HekStPub-...)
+  #If there are multiple publications, modify -Category with the proper name or manually run the snapshot job (servername-databasename-publicationname-#-...)
 
 # Keep testing by inserting new values. 
   
+# Delete or Disables replication distribution for the target SQL instances (CAUTION NEEDED THIS WILL DESTROY ALL PUBLICATION, Subscription etc)
+# Disable-DbaReplPublishing -SqlInstance hek
