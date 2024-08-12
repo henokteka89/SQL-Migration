@@ -1,7 +1,7 @@
 -- E.g. we want to create a linked server HENOK\TESTENV for remote server HENOK\TESTENV
--- if login/password not specified it uses the default login account.
---this drops if there LS by the same name
--- AT the end as STORED PROC
+-- If login/password is not specified it uses the default login account.
+--this drops if there is LS by the same name
+-- At the end as STORED PROC
 
 -- Variables for linked server setup
 DECLARE @LinkedServerName NVARCHAR(128) = 'HENOK\TESTENV';
@@ -98,7 +98,7 @@ BEGIN
 END
 ELSE
 BEGIN
-    -- Using current login's security context (default)
+    -- Using the current login's security context (default)
     EXEC sp_addlinkedsrvlogin 
         @rmtsrvname = @RemoteServer, 
         @useself = 'true', 
