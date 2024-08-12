@@ -1,0 +1,47 @@
+-- E.g. we want to create a linked server HENOK\TESTENV for remote server HENOK\TESTENV
+-- if login/password not specified it uses the default login account.
+-- Variables for linked server setup
+DECLARE @LinkedServerName NVARCHAR(128) = 'HENOK\TESTENV';
+DECLARE @RemoteServer NVARCHAR(128) = 'HENOK\TESTENV';
+DECLARE @RemoteLogin NVARCHAR(128) = NULL; -- Set to NULL by default
+DECLARE @RemotePassword NVARCHAR(128) = NULL; -- Set to NULL by default
+
+-- Drop the linked server if it already exists
+IF EXISTS (SELECT * FROM sys.servers WHERE name = @LinkedServerName)
+BEGIN
+    EXEC sp_dropserver @server = @LinkedServerName, @droplogins = 'droplogins';
+END
+
+-- Create the linked server
+EXEC sp_addlinkedserver 
+    @server = @LinkedServerName, 
+    @srvproduct = '', 
+    @provider = 'SQLNCLI', 
+    @datasrc = @RemoteServer;
+
+-- Set up security for the linked server
+IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
+BEGIN
+    -- Using SQL Server authentication
+    EXEC sp_addlinkedsrvlogin 
+        @rmtsrvname = @LinkedServerName, 
+        @useself = 'false', 
+        @locallogin = NULL, 
+        @rmtuser = @RemoteLogin, 
+        @rmtpassword = @RemotePassword;
+END
+ELSE
+BEGIN
+    -- Using current login's security context (default)
+    EXEC sp_addlinkedsrvlogin 
+        @rmtsrvname = @LinkedServerName, 
+        @useself = 'true', 
+        @locallogin = NULL, 
+        @rmtuser = NULL, 
+        @rmtpassword = NULL;
+END
+
+-- Enable data access
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'DATA ACCESS', @optvalue = 'TRUE';
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC', @optvalue = 'TRUE';
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC OUT', @optvalue = 'TRUE';
