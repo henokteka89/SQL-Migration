@@ -1,5 +1,8 @@
 -- E.g. we want to create a linked server HENOK\TESTENV for remote server HENOK\TESTENV
 -- if login/password not specified it uses the default login account.
+--this drops if there LS by the same name
+-- AT the end as STORED PROC
+
 -- Variables for linked server setup
 DECLARE @LinkedServerName NVARCHAR(128) = 'HENOK\TESTENV';
 DECLARE @RemoteServer NVARCHAR(128) = 'HENOK\TESTENV';
@@ -35,6 +38,69 @@ BEGIN
     -- Using current login's security context (default)
     EXEC sp_addlinkedsrvlogin 
         @rmtsrvname = @LinkedServerName, 
+        @useself = 'true', 
+        @locallogin = NULL, 
+        @rmtuser = NULL, 
+        @rmtpassword = NULL;
+END
+
+-- Enable data access
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'DATA ACCESS', @optvalue = 'TRUE';
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC', @optvalue = 'TRUE';
+EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC OUT', @optvalue = 'TRUE';
+
+
+=======================================================
+=======================================================
+
+USE DBNAME;
+GO
+
+
+CREATE PROC USP_CREATELINKEDSERVER
+(
+@RemoteServer NVARCHAR(128), 
+@RemoteLogin  NVARCHAR(128) = NULL,
+@RemotePassword NVARCHAR(128) = NULL
+)
+--- E.G. exec USP_CREATELINKEDSERVER 'henok\testenv'
+
+AS
+-- Variables for linked server setup
+--DECLARE @LinkedServerName NVARCHAR(128) = @RemoteServer;
+--DECLARE @RemoteServer NVARCHAR(128) = @RemoteServer;
+--DECLARE @RemoteLogin NVARCHAR(128) = NULL; -- Set to NULL by default
+--DECLARE @RemotePassword NVARCHAR(128) = NULL; -- Set to NULL by default
+
+-- Drop the linked server if it already exists
+IF EXISTS (SELECT * FROM sys.servers WHERE name = @RemoteServer)
+BEGIN
+    EXEC sp_dropserver @server = @RemoteServer, @droplogins = 'droplogins';
+END
+
+-- Create the linked server
+EXEC sp_addlinkedserver 
+    @server = @RemoteServer, 
+    @srvproduct = '', 
+    @provider = 'SQLNCLI', 
+    @datasrc = @RemoteServer;
+
+-- Set up security for the linked server
+IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
+BEGIN
+    -- Using SQL Server authentication
+    EXEC sp_addlinkedsrvlogin 
+        @rmtsrvname = @RemoteServer, 
+        @useself = 'false', 
+        @locallogin = NULL, 
+        @rmtuser = @RemoteLogin, 
+        @rmtpassword = @RemotePassword;
+END
+ELSE
+BEGIN
+    -- Using current login's security context (default)
+    EXEC sp_addlinkedsrvlogin 
+        @rmtsrvname = @RemoteServer, 
         @useself = 'true', 
         @locallogin = NULL, 
         @rmtuser = NULL, 
