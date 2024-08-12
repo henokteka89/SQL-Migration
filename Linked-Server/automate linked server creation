@@ -1,4 +1,5 @@
 -- E.g. we want to create a linked server HENOK\TESTENV for remote server HENOK\TESTENV
+-- For SQL Server, both Linked server name and Remote Server name will be the same
 -- If login/password is not specified it uses the default login account.
 --this drops if there is LS by the same name
 -- At the end as STORED PROC
