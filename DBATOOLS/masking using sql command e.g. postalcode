@@ -1,0 +1,29 @@
+# Import the dbatools module
+Import-Module dbatools
+
+# Define the SQL Instance and Database
+$sqlInstance = 'localhost'   # Replace with your SQL Server instance name
+$databaseName = 'AdventureWorks2019'
+$tableName = 'Person.Address'
+$columnName = 'PostalCode'
+
+# Create a SQL Connection
+$connectionString = "Server=$sqlInstance;Database=$databaseName;Integrated Security=True;"
+$connection = New-Object System.Data.SqlClient.SqlConnection
+$connection.ConnectionString = $connectionString
+$connection.Open()
+
+# Create a SQL Command to Mask the PostalCode Column
+$command = $connection.CreateCommand()
+$command.CommandText = "
+    UPDATE $tableName
+    SET $columnName = RIGHT('00000' + CAST(CAST(ABS(CHECKSUM(NEWID())) % 100000 AS VARCHAR(5)) AS NVARCHAR(5)), 5)
+    WHERE $columnName IS NOT NULL;
+"
+# Execute the Command
+$command.ExecuteNonQuery()
+
+# Close the Connection
+$connection.Close()
+
+Write-Output "PostalCode column masked successfully in $tableName table."
