@@ -1,0 +1,13 @@
+SELECT 
+    name AS LinkedServerName,
+    product AS ProductName,
+    provider AS ProviderName,
+    data_source AS DataSource,
+    catalog AS Catalog,
+    provider_string AS ProviderString
+FROM 
+    sys.servers
+WHERE 
+    is_linked = 1
+
+--Where Name not in ('','');
