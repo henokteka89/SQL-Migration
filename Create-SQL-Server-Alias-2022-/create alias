@@ -37,3 +37,13 @@ The aliases are located in different sections of the registry depending on wheth
 (https://vladdba.com/2023/09/29/configuring-and-using-sql-server-client-aliases/)
 Test in Personal lab. I have named instance hen\testenv. SQL BROWSER is disabled. I enabled TCP IP and added port 1533 for 
 hen\testenv Configuration. Gave alias Test hen\testenv and added static TCP IP of 1533. Now able to connect using TEST only. 
+
+New-DbaClientAlias -ServerName Hen  -Alias SVR1
+New-DbaClientAlias -ServerName Hen\testenv   -Alias SVR2
+
+Get-DbaClientAlias | Out-GridView
+
+Remove-DbaClientAlias -ComputerName hen  -Alias svr1
+Remove-DbaClientAlias -ComputerName hen  -Alias svr2
+
+
