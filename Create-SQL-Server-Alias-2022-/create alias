@@ -1,5 +1,5 @@
 Use cliconfg utility to Configure aliases 
-You have to do the below steps for both 64 and 32 bit cliconfg
+You have to do the below steps for both 64 and 32 bit cliconfg for integrity althogh 64 is for 64, 32 for 32 systems.
 -- C:\windows\system32\cliconfg.exe (64-bit) 
 -- C:\windows\syswow64\cliconfg.exe (32-bit) 
 
@@ -8,5 +8,32 @@ You have to do the below steps for both 64 and 32 bit cliconfg
 (this pops a new window "Add Network Library Configuration
 3. Check "TCPI/P" Network Library. Add the Alias name, server name (FQDN) and put static TCP IP.
 
+To check what Alias' exist use DBATOOLs powershell (run as admin)
+Get-DbaClientAlias | Out-GridView
+
+To create new Alias using DBATOOLs
+New-DbaClientAlias -ServerName Hen -Alias ABC
+
+When creating it on a remote computer, let’s say you’re running the command from your laptop but the alias should be on an app server, 
+the -ComputerName parameter will need to be added:
+
+New-DbaClientAlias -ComputerName AppServer01 -ServerName Hostname\Instance -Alias OldVM\OldInstance
+
+You can even create SQL Server client aliases for Azure SQL DB connections.
+
+New-DbaClientAlias -ServerName 'YourServer.database.windows.net,1433' -Alias OnPremVM\OnPremInstance
+
+To Delete
+
+Removing aliases with dbatools is also simple, using the Remove-DbaClientAlias command
+
+Remove-DbaClientAlias -ComputerName AppServer01 -Alias OldVM\OldInstance
+
+Registry keys
+The aliases are located in different sections of the registry depending on whether they’re 32 or 64 bit.
+32 bit aliases reside in HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\MSSQLServer\Client\ConnectTo
+64 bit aliases reside in HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Client\ConnectTo
+
+(https://vladdba.com/2023/09/29/configuring-and-using-sql-server-client-aliases/)
 Test in Personal lab. I have named instance hen\testenv. SQL BROWSER is disabled. I enabled TCP IP and added port 1533 for 
 hen\testenv Configuration. Gave alias Test hen\testenv and added static TCP IP of 1533. Now able to connect using TEST only. 
