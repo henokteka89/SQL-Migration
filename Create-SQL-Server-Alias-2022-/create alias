@@ -1,0 +1,12 @@
+Use cliconfg utility to Configure aliases 
+You have to do the below steps for both 64 and 32 bit cliconfg
+-- C:\windows\system32\cliconfg.exe (64-bit) 
+-- C:\windows\syswow64\cliconfg.exe (32-bit) 
+
+1. Open cliconfg and enable the TCP/IP protocol (You will do this to each of the above configs and add/enable TCP)
+2. Click the Alias tab (next to General) and then click Add.
+(this pops a new window "Add Network Library Configuration
+3. Check "TCPI/P" Network Library. Add the Alias name, server name (FQDN) and put static TCP IP.
+
+Test in Personal lab. I have named instance hen\testenv. SQL BROWSER is disabled. I enabled TCP IP and added port 1533 for 
+hen\testenv Configuration. Gave alias Test hen\testenv and added static TCP IP of 1533. Now able to connect using TEST only. 
