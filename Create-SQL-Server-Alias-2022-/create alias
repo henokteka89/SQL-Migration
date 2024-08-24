@@ -1,7 +1,7 @@
 Use cliconfg utility to Configure aliases 
 You have to do the below steps for both 64 and 32 bit cliconfg for integrity althogh 64 is for 64, 32 for 32 systems.
--- C:\windows\system32\cliconfg.exe (32-bit) 
--- C:\windows\syswow64\cliconfg.exe (64-bit) 
+-- C:\windows\system32\cliconfg.exe (64-bit) 
+-- C:\windows\syswow64\cliconfg.exe (32-bit) 
 
 1. Open cliconfg and enable the TCP/IP protocol (You will do this to each of the above configs and add/enable TCP)
 2. Click the Alias tab (next to General) and then click Add.
