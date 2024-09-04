@@ -1,3 +1,14 @@
+
+USE [admin]
+GO
+
+/****** Object:  StoredProcedure [dbo].[USP_CREATELINKEDSERVER]    Script Date: 9/4/2024 10:35:06 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 /*
 USP_CREATELINKEDSERVER 
 This stored procedure automates the creation of a linked server in SQL Server, allowing flexibility for execution and confirmation 
@@ -25,15 +36,6 @@ EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1; -- 
 EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @execute = 1; -- add ,Confirm = 1 (if it exists)   -- This executes the command
 EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1 ,@RemoteLogin = 'sqllogin', @RemotePassword = 'strongpassword';
 */
-USE [admin]
-GO
-
-/****** Object:  StoredProcedure [dbo].[USP_CREATELINKEDSERVER]    Script Date: 9/4/2024 10:35:06 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
 
 CREATE OR ALTER PROC [dbo].[USP_CREATELINKEDSERVER]  
 (
