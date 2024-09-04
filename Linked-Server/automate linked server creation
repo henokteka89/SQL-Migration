@@ -1,114 +1,165 @@
--- E.g. we want to create a linked server HENOK\TESTENV for remote server HENOK\TESTENV
--- For SQL Server, both Linked server name and Remote Server name will be the same
--- If login/password is not specified it uses the default login account.
---this drops if there is LS by the same name
--- At the end as STORED PROC
+/*
+USP_CREATELINKEDSERVER 
+This stored procedure automates the creation of a linked server in SQL Server, allowing flexibility for execution and confirmation 
+before dropping existing servers. It simplifies managing linked servers by offering options to print or execute the generated SQL commands, 
+making it suitable for testing and production environments.
 
--- Variables for linked server setup
-DECLARE @LinkedServerName NVARCHAR(128) = 'HENOK\TESTENV';
-DECLARE @RemoteServer NVARCHAR(128) = 'HENOK\TESTENV';
-DECLARE @RemoteLogin NVARCHAR(128) = NULL; -- Set to NULL by default
-DECLARE @RemotePassword NVARCHAR(128) = NULL; -- Set to NULL by default
+Key Features:
+Remote Server Creation: Easily create a linked server to a remote SQL instance.
+Security Configuration: Supports both SQL Server authentication and Windows authentication (using the current login).
+Customizable Options: Use the @print parameter to generate the full script without executing, or @execute to create the server directly.
+Safe Dropping of Existing Servers: If a linked server with the same name already exists, the procedure prints the drop command for review and only drops the server if @confirm_drop = 1 is specified.
+Server Options: Automatically sets common server options such as DATA ACCESS, RPC, and RPC OUT.
 
--- Drop the linked server if it already exists
-IF EXISTS (SELECT * FROM sys.servers WHERE name = @LinkedServerName)
-BEGIN
-    EXEC sp_dropserver @server = @LinkedServerName, @droplogins = 'droplogins';
-END
+Parameters:
+@RemoteServer: The name of the remote server to link.
+@RemoteLogin: (Optional) The login for SQL Server authentication.
+@RemotePassword: (Optional) The password for SQL Server authentication.
+@print: (Optional, default = 0) If set to 1, prints the SQL command without execution.
+@execute: (Optional, default = 1) If set to 1, executes the SQL command.
+@confirm_drop: (Optional, default = 0) If set to 1 together with execute = 1, drops the existing linked server if it exists before creating a new one.
 
--- Create the linked server
-EXEC sp_addlinkedserver 
-    @server = @LinkedServerName, 
-    @srvproduct = '', 
-    @provider = 'SQLNCLI', 
-    @datasrc = @RemoteServer;
-
--- Set up security for the linked server
-IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
-BEGIN
-    -- Using SQL Server authentication
-    EXEC sp_addlinkedsrvlogin 
-        @rmtsrvname = @LinkedServerName, 
-        @useself = 'false', 
-        @locallogin = NULL, 
-        @rmtuser = @RemoteLogin, 
-        @rmtpassword = @RemotePassword;
-END
-ELSE
-BEGIN
-    -- Using current login's security context (default)
-    EXEC sp_addlinkedsrvlogin 
-        @rmtsrvname = @LinkedServerName, 
-        @useself = 'true', 
-        @locallogin = NULL, 
-        @rmtuser = NULL, 
-        @rmtpassword = NULL;
-END
-
--- Enable data access
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'DATA ACCESS', @optvalue = 'TRUE';
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC', @optvalue = 'TRUE';
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC OUT', @optvalue = 'TRUE';
-
-
-=======================================================
-=======================================================
-
-USE DBNAME;
+Example Usage:
+ 
+EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1; -- Window Login / using the current login --This gives the command
+EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @execute = 1; -- add ,Confirm = 1 (if it exists)   -- This executes the command
+EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1 ,@RemoteLogin = 'sqllogin', @RemotePassword = 'strongpassword';
+*/
+USE [admin]
 GO
 
+/****** Object:  StoredProcedure [dbo].[USP_CREATELINKEDSERVER]    Script Date: 9/4/2024 10:35:06 AM ******/
+SET ANSI_NULLS ON
+GO
 
-CREATE PROC USP_CREATELINKEDSERVER
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE OR ALTER PROC [dbo].[USP_CREATELINKEDSERVER]  
 (
-@RemoteServer NVARCHAR(128), 
-@RemoteLogin  NVARCHAR(128) = NULL,
-@RemotePassword NVARCHAR(128) = NULL
+    @RemoteServer NVARCHAR(128), 
+    @RemoteLogin NVARCHAR(128) = NULL,
+    @RemotePassword NVARCHAR(128) = NULL,
+    @print BIT = 0,       -- If 1, print the command
+    @execute BIT = 1,     -- If 1, execute the command
+    @confirm_drop BIT = 0 -- If 1, confirm to drop the existing linked server
 )
---- E.G. exec USP_CREATELINKEDSERVER 'henok\testenv'
-
 AS
--- Variables for linked server setup
---DECLARE @LinkedServerName NVARCHAR(128) = @RemoteServer;
---DECLARE @RemoteServer NVARCHAR(128) = @RemoteServer;
---DECLARE @RemoteLogin NVARCHAR(128) = NULL; -- Set to NULL by default
---DECLARE @RemotePassword NVARCHAR(128) = NULL; -- Set to NULL by default
-
--- Drop the linked server if it already exists
-IF EXISTS (SELECT * FROM sys.servers WHERE name = @RemoteServer)
 BEGIN
-    EXEC sp_dropserver @server = @RemoteServer, @droplogins = 'droplogins';
-END
+    SET NOCOUNT ON;
 
--- Create the linked server
-EXEC sp_addlinkedserver 
-    @server = @RemoteServer, 
-    @srvproduct = '', 
-    @provider = 'SQLNCLI', 
-    @datasrc = @RemoteServer;
+    DECLARE @sql NVARCHAR(MAX);
+    DECLARE @LinkedServerExists BIT = 0;
 
--- Set up security for the linked server
-IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
-BEGIN
-    -- Using SQL Server authentication
-    EXEC sp_addlinkedsrvlogin 
-        @rmtsrvname = @RemoteServer, 
-        @useself = 'false', 
-        @locallogin = NULL, 
-        @rmtuser = @RemoteLogin, 
-        @rmtpassword = @RemotePassword;
-END
-ELSE
-BEGIN
-    -- Using the current login's security context (default)
-    EXEC sp_addlinkedsrvlogin 
-        @rmtsrvname = @RemoteServer, 
-        @useself = 'true', 
-        @locallogin = NULL, 
-        @rmtuser = NULL, 
-        @rmtpassword = NULL;
-END
+    -- Check if the linked server already exists
+    IF EXISTS (SELECT * FROM sys.servers WHERE name = @RemoteServer)
+    BEGIN
+        SET @LinkedServerExists = 1;
 
--- Enable data access
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'DATA ACCESS', @optvalue = 'TRUE';
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC', @optvalue = 'TRUE';
-EXEC sp_serveroption @server = @RemoteServer, @optname = 'RPC OUT', @optvalue = 'TRUE';
+       -- Drop command
+        SET @sql = '
+EXEC sp_dropserver @server = ''' + @RemoteServer + ''', @droplogins = ''droplogins'';';
+        
+        IF @print = 1
+        BEGIN
+            -- Print drop command and the execution script
+            PRINT '-- Linked Server [' + @RemoteServer + '] already exists.';
+            PRINT '-- To drop the linked server, use the following command:';
+            PRINT @sql;
+            PRINT '
+-- To create a new linked server, use the command below after dropping the existing one:';
+
+            -- Print the create script
+            SET @sql = '
+EXEC sp_addlinkedserver @server = ''' + @RemoteServer + ''', @srvproduct = '''', @provider = ''SQLNCLI'', @datasrc = ''' + @RemoteServer + ''';';
+            PRINT @sql;
+            
+            -- Print the security settings
+            IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
+            BEGIN
+                SET @sql = 'EXEC sp_addlinkedsrvlogin @rmtsrvname = ''' + @RemoteServer + ''', @useself = ''false'', @locallogin = NULL, @rmtuser = ''' + @RemoteLogin + ''', @rmtpassword = ''' + @RemotePassword + ''';';
+            END
+            ELSE
+            BEGIN
+                SET @sql = 'EXEC sp_addlinkedsrvlogin @rmtsrvname = ''' + @RemoteServer + ''', @useself = ''true'', @locallogin = NULL, @rmtuser = NULL, @rmtpassword = NULL;';
+            END
+            PRINT @sql;
+
+            -- Print the server options
+            PRINT '
+-- To set the server options, use the commands below:';
+            PRINT '
+EXEC sp_serveroption @server = ''' + @RemoteServer + ''', @optname = ''DATA ACCESS'', @optvalue = ''TRUE'';';
+            PRINT 'EXEC sp_serveroption @server = ''' + @RemoteServer + ''', @optname = ''RPC'', @optvalue = ''TRUE'';';
+            PRINT 'EXEC sp_serveroption @server = ''' + @RemoteServer + ''', @optname = ''RPC OUT'', @optvalue = ''TRUE'';';
+
+            RETURN; -- No execution, just printing
+        END
+
+        -- If execute is requested and linked server exists, raise an error unless confirmation is provided
+        IF @execute = 1 AND @confirm_drop = 0
+        BEGIN
+            -- Raise error and provide the drop command
+            RAISERROR ('-- Linked Server [%s] already exists. 
+-- To proceed, use the drop script below or re-run the procedure with @confirm_drop = 1 to drop the linked server.', 16, 1, @RemoteServer);
+            PRINT '-- Drop Command: ' + @sql;
+            RETURN; -- Stop further execution
+        END
+
+        -- Confirm drop if the user wants to drop and recreate the linked server
+        IF @confirm_drop = 1
+        BEGIN
+            IF @print = 1 PRINT @sql;
+            IF @execute = 1 EXEC sp_executesql @sql;
+        END
+    END
+
+    -- Create the linked server if not already existing or confirmed to be dropped
+    SET @sql = 'EXEC sp_addlinkedserver @server = ''' + @RemoteServer + ''', @srvproduct = '''', @provider = ''SQLNCLI'', @datasrc = ''' + @RemoteServer + ''';';
+    IF @print = 1 PRINT @sql;
+    IF @execute = 1 AND @LinkedServerExists = 0 EXEC sp_executesql @sql;
+
+    -- Set up security for the linked server
+    IF @RemoteLogin IS NOT NULL AND @RemotePassword IS NOT NULL
+    BEGIN
+        -- Using SQL Server authentication
+        SET @sql = 'EXEC sp_addlinkedsrvlogin @rmtsrvname = ''' + @RemoteServer + ''', @useself = ''false'', @locallogin = NULL, @rmtuser = ''' + @RemoteLogin + ''', @rmtpassword = ''' + @RemotePassword + ''';';
+    END
+    ELSE
+    BEGIN
+        -- Using current login's security context
+        SET @sql = 'EXEC sp_addlinkedsrvlogin @rmtsrvname = ''' + @RemoteServer + ''', @useself = ''true'', @locallogin = NULL, @rmtuser = NULL, @rmtpassword = NULL;';
+    END
+
+    IF @print = 1 PRINT @sql;
+    IF @execute = 1 AND @LinkedServerExists = 0 EXEC sp_executesql @sql;
+
+    -- Enable server options for data access, RPC, and RPC OUT
+    DECLARE @options TABLE (OptName NVARCHAR(50), OptValue NVARCHAR(5));
+    
+    INSERT INTO @options (OptName, OptValue)
+    VALUES ('DATA ACCESS', 'TRUE'), 
+           ('RPC', 'TRUE'), 
+           ('RPC OUT', 'TRUE');
+    
+    DECLARE @opt NVARCHAR(50), @value NVARCHAR(5);
+    DECLARE options_cursor CURSOR FOR
+    SELECT OptName, OptValue FROM @options;
+    
+    OPEN options_cursor;
+    FETCH NEXT FROM options_cursor INTO @opt, @value;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @sql = 'EXEC sp_serveroption @server = ''' + @RemoteServer + ''', @optname = ''' + @opt + ''', @optvalue = ''' + @value + ''';';
+        IF @print = 1 PRINT @sql;
+        IF @execute = 1 AND @LinkedServerExists = 0 EXEC sp_executesql @sql;
+        FETCH NEXT FROM options_cursor INTO @opt, @value;
+    END
+
+    CLOSE options_cursor;
+    DEALLOCATE options_cursor;
+
+    RETURN 0;
+END
+GO
