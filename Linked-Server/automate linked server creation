@@ -35,6 +35,7 @@ Example Usage:
 EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1; -- Window Login / using the current login --This gives the command
 EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @execute = 1; -- add ,Confirm = 1 (if it exists)   -- This executes the command
 EXEC dbo.USP_CREATELINKEDSERVERnew @RemoteServer = 'ServerName', @print = 1 ,@RemoteLogin = 'sqllogin', @RemotePassword = 'strongpassword';
+EXEC dbo.USP_CREATELINKEDSERVERnew @ListLinkedServers = 1 -- Lists all the servers
 */
 
 CREATE OR ALTER PROC [dbo].[USP_CREATELINKEDSERVER]  
@@ -44,9 +45,26 @@ CREATE OR ALTER PROC [dbo].[USP_CREATELINKEDSERVER]
     @RemotePassword NVARCHAR(128) = NULL,
     @print BIT = 0,       -- If 1, print the command
     @execute BIT = 1,     -- If 1, execute the command
-    @confirm_drop BIT = 0 -- If 1, confirm to drop the existing linked server
+    @confirm_drop BIT = 0, -- If 1, confirm to drop the existing linked server
+    @ListLinkedServers bit = 0 -- If 1, lists all linked servers in the server
 )
 AS
+
+IF  @ListLinkedServers = 1
+Begin 
+SELECT 
+    name AS LinkedServerName,
+    product AS ProductName,
+    provider AS ProviderName,
+    data_source AS DataSource,
+    catalog AS Catalog,
+    provider_string AS ProviderString
+FROM     sys.servers
+WHERE is_linked = 1
+End
+else 
+print 'Linked server info not requested'
+
 BEGIN
     SET NOCOUNT ON;
 
