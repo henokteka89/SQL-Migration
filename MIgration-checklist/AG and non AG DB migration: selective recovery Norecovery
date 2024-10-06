@@ -1,0 +1,48 @@
+# TO handle AG databases to be on NORecovery mode, but others on Recovery 
+
+
+# Define the two instances
+$localinstance = "henok"
+$namedinstance = "henok\testenv"
+
+# Set configuration to trust the certificate
+Set-DbatoolsConfig -FullName sql.connection.trustcert -Value $true
+
+# List the databases that are part of Always On AG (they will be in NORECOVERY
+$alwaysOnDatabases = @('sqlmon', 'AdventureWorks2016') # you can mention server , 'AlwaysOnDB2', 'AlwaysOnDB3', 'AlwaysOnDB4')
+
+# Get databases (puts them into $dbs)
+$databaseSplat = @{
+    SqlInstance   = $localinstance
+    ExcludeSystem = $true
+    Database      = 'AdventureWorks2014', 'sqlmon', 'AdventureWorks2016', 'AdventureWorks2019'   # List or use -AllDatabases, 'AlwaysOnDB2', 'OtherDB1'  
+    OutVariable   = "dbs"
+}
+Get-DbaDatabase @databaseSplat  # Get the databases into the $dbs variable
+
+# Loop through databases and handle the restore based on whether they are part of AG
+foreach ($db in $dbs) {
+    # Prepare the splat for migration
+    $migrateDbSplat = @{
+        Source           = $localinstance
+        Destination      = $namedinstance
+        Database         = $db.name
+        BackupRestore    = $true
+        SharedPath       = 'd:\migration'
+    }
+    
+    # Check if the database is part of Always On AG and should be restored with NoRecovery
+    if ($db.name -in $alwaysOnDatabases) {
+        $migrateDbSplat.NoRecovery = $true  # Restore in NoRecovery mode for AG databases
+        Write-Host "Restoring $($db.name) with NoRecovery for AG joining"
+    } else {
+        # Restore with recovery for non-AG databases
+        $migrateDbSplat.NoRecovery = $false  # Restore with Recovery for other databases
+        Write-Host "Restoring $($db.name) with Recovery"
+    }
+
+    # Perform the migration
+    Copy-DbaDatabase @migrateDbSplat
+}
+
+Write-Host "Migration process completed."
