@@ -1,0 +1,54 @@
+# Define the two instances
+$localinstance = "henok"        # Source server
+$namedinstance = "henok\testenv"  # Destination server
+
+# Set configuration to trust the certificate
+Set-DbatoolsConfig -FullName sql.connection.trustcert -Value $true
+
+ 
+# Define the name of the Availability Group
+$availabilityGroupName = "MYAG"  # Replace with your actual AG name
+
+
+# List the databases that are part of Always On AG (they will be in NORECOVERY
+$alwaysOnDatabases = @('sqlmon', 'AdventureWorks2016') # you can mention server , 'AlwaysOnDB2', 'AlwaysOnDB3', 'AlwaysOnDB4')
+
+# Get databases (puts them into $dbs)
+$databaseSplat = @{
+    SqlInstance   = $localinstance
+    ExcludeSystem = $true
+    Database      = 'AdventureWorks2014', 'sqlmon', 'AdventureWorks2016', 'AdventureWorks2019'   # List or use -AllDatabases, 'AlwaysOnDB2', 'OtherDB1'  
+    OutVariable   = "dbs"
+}
+Get-DbaDatabase @databaseSplat              # Get the list of databases
+
+# Loop through databases and handle the restore based on whether they are part of AG
+foreach ($db in $dbs) {
+    $migrateDbSplat = @{
+        Source           = $localinstance    # Where the database is coming from
+        Destination      = $namedinstance    # Where it’s going
+        Database         = $db.name          # The name of the database we're moving
+        BackupRestore    = $true             # Using backup and restore to move it
+        SharedPath       = 'd:\migration'    # Where we’re storing the backup files
+    }
+
+    # Check if the database is part of Always On AG and should be restored with NoRecovery
+    if ($db.name -in $alwaysOnDatabases) {
+        $migrateDbSplat.NoRecovery = $true   # Restore in NoRecovery mode for AG databases
+        Write-Host "Restoring $($db.name) with NoRecovery for AG joining"
+        # Perform the migration
+        Copy-DbaDatabase @migrateDbSplat
+
+        # Step: Add the database to the Availability Group
+        Write-Host "Adding $($db.name) to the Availability Group $availabilityGroupName"
+        Add-SqlAvailabilityDatabase -AvailabilityGroup $availabilityGroupName -Database $db.name -ServerInstance $namedinstance
+    } else {
+        # Restore with recovery for non-AG databases
+        $migrateDbSplat.NoRecovery = $false  # Restore with Recovery for other databases
+        Write-Host "Restoring $($db.name) with Recovery"
+        # Perform the migration
+        Copy-DbaDatabase @migrateDbSplat
+    }
+}
+
+Write-Host "Migration process completed."
