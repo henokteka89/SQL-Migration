@@ -1,0 +1,7 @@
+https://docs.dbatools.io/Add-DbaAgDatabase
+
+PS C:\> Add-DbaAgDatabase -SqlInstance sql2017a -AvailabilityGroup ag1 -Database db1, db2 -Confirm
+Adds db1 and db2 to ag1 on sql2017a. Prompts for confirmation.
+ 
+PS C:\> Get-DbaDatabase -SqlInstance sql2017a | Out-GridView -Passthru | Add-DbaAgDatabase -AvailabilityGroup ag1
+Adds selected databases from sql2017a to ag1
