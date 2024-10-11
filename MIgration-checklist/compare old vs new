@@ -1,0 +1,147 @@
+-- Table to store login details
+CREATE TABLE LoginDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    LoginName NVARCHAR(128),
+    SID VARBINARY(85),
+    IsDisabled BIT,
+    PasswordPolicyEnabled BIT,
+    DefaultDatabase NVARCHAR(128),
+    CreateDate DATETIME,
+    ModifyDate DATETIME
+);
+
+-- Table to store job details
+CREATE TABLE JobDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    JobName NVARCHAR(128),
+    IsEnabled BIT,
+    Schedule NVARCHAR(256),
+    JobOwner NVARCHAR(128),
+    LastRunStatus NVARCHAR(50),
+    CreateDate DATETIME,
+    ModifyDate DATETIME
+);
+
+-- Table to store job step details
+CREATE TABLE JobStepDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    JobName NVARCHAR(128),
+    StepNumber INT,
+    StepName NVARCHAR(128),
+    Command NVARCHAR(MAX),
+    OnSuccessAction NVARCHAR(50),
+    OnFailureAction NVARCHAR(50)
+);
+
+-- Table to store server configuration details
+CREATE TABLE ServerConfigurations (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    ConfigurationName NVARCHAR(128),
+    Value NVARCHAR(128),
+    Description NVARCHAR(256)
+);
+
+-- Table to store database details
+CREATE TABLE DatabaseDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    DatabaseName NVARCHAR(128),
+    FilePath NVARCHAR(256),
+    FileSize NVARCHAR(128),
+    GrowthSetting NVARCHAR(50)
+);
+
+-- Table to store permissions and roles
+CREATE TABLE PermissionDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    PrincipalName NVARCHAR(128),
+    PermissionType NVARCHAR(128),
+    GrantedTo NVARCHAR(128),
+    Scope NVARCHAR(128)
+);
+
+-- Table to store linked server details
+CREATE TABLE LinkedServerDetails (
+    ServerType NVARCHAR(50),  -- old, new, old_dr, new_dr
+    LinkedServerName NVARCHAR(128),
+    DataSource NVARCHAR(256),
+    Provider NVARCHAR(128),
+    SecurityMode NVARCHAR(50)
+);
+-- =============================================================================================
+
+--  Insert
+
+  -- Insert data into LoginDetails from the old server
+INSERT INTO LoginDetails (ServerType, LoginName, SID, IsDisabled, PasswordPolicyEnabled, DefaultDatabase, CreateDate, ModifyDate)
+SELECT 
+    'old' AS ServerType,
+    name AS LoginName,
+    sid AS SID,
+    is_disabled AS IsDisabled,
+    is_policy_checked AS PasswordPolicyEnabled,
+    default_database_name AS DefaultDatabase,
+    create_date,
+    modify_date
+FROM 
+    [LinkedServerOld].master.sys.sql_logins;
+
+-- Repeat the above for the new server, old DR, and new DR with appropriate ServerType values
+===
+-- job details
+
+-- Insert data into JobDetails from the old server
+INSERT INTO JobDetails (ServerType, JobName, IsEnabled, Schedule, JobOwner, LastRunStatus, CreateDate, ModifyDate)
+SELECT 
+    'old' AS ServerType,
+    name AS JobName,
+    enabled AS IsEnabled,
+    schedule_description AS Schedule,
+    owner_sid AS JobOwner,
+    last_run_outcome AS LastRunStatus,
+    date_created AS CreateDate,
+    date_modified AS ModifyDate
+FROM 
+    [LinkedServerOld].msdb.dbo.sysjobs;
+
+-- Repeat for other servers
+=========================================================================================
+Comparison Queries
+  Comparing Logins
+-- Find logins present in the old server but missing in the new server
+SELECT LoginName
+FROM LoginDetails
+WHERE ServerType = 'old'
+AND LoginName NOT IN (
+    SELECT LoginName FROM LoginDetails WHERE ServerType = 'new'
+);
+
+-- Check if login states (enabled/disabled) match between old and new servers
+SELECT o.LoginName, o.IsDisabled AS OldIsDisabled, n.IsDisabled AS NewIsDisabled
+FROM LoginDetails o
+LEFT JOIN LoginDetails n ON o.LoginName = n.LoginName AND n.ServerType = 'new'
+WHERE o.ServerType = 'old'
+AND (o.IsDisabled <> n.IsDisabled OR n.LoginName IS NULL);
+
+Comparing Jobs
+-- Find jobs present in the old server but missing in the new server
+SELECT JobName
+FROM JobDetails
+WHERE ServerType = 'old'
+AND JobName NOT IN (
+    SELECT JobName FROM JobDetails WHERE ServerType = 'new'
+);
+
+-- Check if job enabled/disabled states match between old and new servers
+SELECT o.JobName, o.IsEnabled AS OldIsEnabled, n.IsEnabled AS NewIsEnabled
+FROM JobDetails o
+LEFT JOIN JobDetails n ON o.JobName = n.JobName AND n.ServerType = 'new'
+WHERE o.ServerType = 'old'
+AND (o.IsEnabled <> n.IsEnabled OR n.JobName IS NULL);
+
+Comparing Server Configurations
+-- Compare server configuration values between old and new servers
+SELECT o.ConfigurationName, o.Value AS OldValue, n.Value AS NewValue
+FROM ServerConfigurations o
+LEFT JOIN ServerConfigurations n ON o.ConfigurationName = n.ConfigurationName AND n.ServerType = 'new'
+WHERE o.ServerType = 'old'
+AND (o.Value <> n.Value OR n.ConfigurationName IS NULL);
