@@ -145,3 +145,131 @@ FROM ServerConfigurations o
 LEFT JOIN ServerConfigurations n ON o.ConfigurationName = n.ConfigurationName AND n.ServerType = 'new'
 WHERE o.ServerType = 'old'
 AND (o.Value <> n.Value OR n.ConfigurationName IS NULL);
+
+
+
+
+
+
+ADDITIONS
+===========
+-- Insert data into DatabaseDetails from the old server
+INSERT INTO DatabaseDetails (ServerType, DatabaseName, FilePath, FileSize, GrowthSetting)
+SELECT 
+    'old' AS ServerType,
+    name AS DatabaseName,
+    physical_name AS FilePath,
+    CAST(size * 8 / 1024 AS VARCHAR(50)) + ' MB' AS FileSize,
+    CASE WHEN is_percent_growth = 1 THEN 'Percent Growth' ELSE 'Fixed Growth' END AS GrowthSetting
+FROM 
+    [LinkedServerOld].master.sys.master_files mf
+JOIN 
+    [LinkedServerOld].master.sys.databases db ON mf.database_id = db.database_id;
+
+-- Repeat the above insert statement for the new server, old DR, and new DR with appropriate ServerType values
+
+
+-- Insert data into PermissionDetails from the old server
+INSERT INTO PermissionDetails (ServerType, PrincipalName, PermissionType, GrantedTo, Scope)
+SELECT 
+    'old' AS ServerType,
+    p.name AS PrincipalName,
+    dp.permission_name AS PermissionType,
+    OBJECT_NAME(major_id, dp.class_desc) AS GrantedTo,
+    dp.class_desc AS Scope
+FROM 
+    [LinkedServerOld].master.sys.database_permissions dp
+JOIN 
+    [LinkedServerOld].master.sys.database_principals p ON dp.grantee_principal_id = p.principal_id;
+
+-- Repeat the insert for the new server, old DR, and new DR
+
+
+
+
+-- Insert data into LinkedServerDetails from the old server
+INSERT INTO LinkedServerDetails (ServerType, LinkedServerName, DataSource, Provider, SecurityMode)
+SELECT 
+    'old' AS ServerType,
+    name AS LinkedServerName,
+    data_source AS DataSource,
+    provider AS Provider,
+    CASE 
+        WHEN is_linked = 1 THEN 'Linked Server'
+        ELSE 'Local Server'
+    END AS SecurityMode
+FROM 
+    [LinkedServerOld].master.sys.servers;
+
+-- Repeat the insert for the new server, old DR, and new DR
+
+
+
+-- Insert data into JobDetails from the old server
+INSERT INTO JobDetails (ServerType, JobName, IsEnabled, Schedule, JobOwner, LastRunStatus, CreateDate, ModifyDate)
+SELECT 
+    'old' AS ServerType,
+    j.name AS JobName,
+    j.enabled AS IsEnabled,
+    s.description AS Schedule,
+    l.name AS JobOwner,
+    CASE h.run_status
+        WHEN 0 THEN 'Failed'
+        WHEN 1 THEN 'Succeeded'
+        WHEN 2 THEN 'Retry'
+        WHEN 3 THEN 'Canceled'
+        ELSE 'Unknown'
+    END AS LastRunStatus,
+    j.date_created AS CreateDate,
+    j.date_modified AS ModifyDate
+FROM 
+    [LinkedServerOld].msdb.dbo.sysjobs j
+LEFT JOIN 
+    [LinkedServerOld].msdb.dbo.sysjobschedules s ON j.job_id = s.job_id
+LEFT JOIN 
+    [LinkedServerOld].master.sys.syslogins l ON j.owner_sid = l.sid
+LEFT JOIN 
+    [LinkedServerOld].msdb.dbo.sysjobhistory h ON j.job_id = h.job_id AND h.instance_id = (SELECT MAX(instance_id) FROM [LinkedServerOld].msdb.dbo.sysjobhistory WHERE job_id = j.job_id);
+
+-- Repeat the insert for the new server, old DR, and new DR
+
+
+
+-- Insert data into JobStepDetails from the old server
+INSERT INTO JobStepDetails (ServerType, JobName, StepNumber, StepName, Command, OnSuccessAction, OnFailureAction)
+SELECT 
+    'old' AS ServerType,
+    j.name AS JobName,
+    s.step_id AS StepNumber,
+    s.step_name AS StepName,
+    s.command AS Command,
+    CASE s.on_success_action
+        WHEN 1 THEN 'Quit with Success'
+        WHEN 2 THEN 'Quit with Failure'
+        WHEN 3 THEN 'Go to Next Step'
+        ELSE 'Unknown'
+    END AS OnSuccessAction,
+    CASE s.on_fail_action
+        WHEN 1 THEN 'Quit with Success'
+        WHEN 2 THEN 'Quit with Failure'
+        WHEN 3 THEN 'Go to Next Step'
+        ELSE 'Unknown'
+    END AS OnFailureAction
+FROM 
+    [LinkedServerOld].msdb.dbo.sysjobsteps s
+JOIN 
+    [LinkedServerOld].msdb.dbo.sysjobs j ON s.job_id = j.job_id;
+
+-- Repeat the insert for the new server, old DR, and new DR
+
+
+
+COMPARE
+
+-- Compare database file details between the old and new servers
+SELECT o.DatabaseName, o.FilePath AS OldFilePath, n.FilePath AS NewFilePath
+FROM DatabaseDetails o
+LEFT JOIN DatabaseDetails n ON o.DatabaseName = n.DatabaseName AND n.ServerType = 'new'
+WHERE o.ServerType = 'old'
+AND (o.FilePath <> n.FilePath OR n.DatabaseName IS NULL);
+
