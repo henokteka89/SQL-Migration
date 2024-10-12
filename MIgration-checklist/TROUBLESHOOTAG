@@ -1,3 +1,6 @@
+
+
+
 TROUBLESHOOT AG
 
 SELECT 
@@ -22,3 +25,29 @@ SELECT
     ag.is_online
 FROM 
     sys.availability_groups ag;
+
+
+SELECT * 
+FROM sys.server_permissions
+WHERE grantee_principal_id = USER_ID('YourLoginName')
+AND permission_name = 'ALTER ANY AVAILABILITY GROUP';
+
+
+SELECT pr.name, dp.permission_name, dp.state_desc
+FROM sys.availability_groups ag
+JOIN sys.database_permissions dp 
+ON ag.group_id = dp.major_id
+JOIN sys.database_principals pr 
+ON dp.grantee_principal_id = pr.principal_id
+WHERE ag.name = 'YourAGName';
+
+
+SELECT * 
+FROM fn_my_permissions('YourDatabaseName', 'DATABASE')
+WHERE permission_name IN ('ALTER', 'TAKE OWNERSHIP');
+
+
+GRANT ALTER ANY AVAILABILITY GROUP TO [YourLoginName];
+
+GRANT CONTROL ON AVAILABILITY GROUP::[YourAGName] TO [YourLoginName];
+
