@@ -1,0 +1,24 @@
+TROUBLESHOOT AG
+
+SELECT 
+    ag.name AS AvailabilityGroupName,
+    ar.replica_server_name AS ReplicaName,
+    rs.role_desc AS ReplicaRole
+FROM 
+    sys.availability_replicas ar
+JOIN 
+    sys.dm_hadr_availability_replica_states rs
+ON 
+    ar.replica_id = rs.replica_id
+JOIN 
+    sys.availability_groups ag
+ON 
+    rs.group_id = ag.group_id;
+
+
+SELECT 
+    ag.name AS AvailabilityGroupName,
+    ag.ag_states_desc AS AGState,
+    ag.is_online
+FROM 
+    sys.availability_groups ag;
