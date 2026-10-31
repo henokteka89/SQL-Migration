@@ -1,0 +1,90 @@
+ 
+# Use for database migration using DBATOOLS  #
+# Modified from JPomfret  #
+ 
+# migrating application databases with dbatools
+# https://github.com/jpomfret/dbatoolsmigrate2022/blob/main/Demos/01_SimpleDatabaseMigration.ps1
+# https://dbatools.io/migrating-application-dbs/
+
+# Assumes you have installed dbatools module (Install-Module dbatools) from https://dbatools.io/download/
+
+# Copy commands available in dbatools
+Get-Command -Module dbatools -Verb Copy
+
+# Declaring Source and destination servers
+$locainstance = "hek"
+$namedinstance = "hek\testenv"
+
+Set-DbatoolsConfig -FullName sql.connection.trustcert -Value $true
+## Get databases (puts them into $databaseSplat)
+$datatbaseSplat = @{
+    SqlInstance   = $locainstance
+    ExcludeSystem = $true
+    Excludedatabase = 'admin' ,'finance', 'StackOverflow2013' #To list or include only few use Database = 'admin', 'finance' --this excludes all but admin and finance
+    OutVariable   = "dbs"        # OutVariable to also capture this to use later
+}
+# List or Check the DBs you called above
+Get-DbaDatabase @datatbaseSplat |
+Select-Object SqlInstance, Name, Status, RecoveryModel, Owner, Compatibility |
+Format-Table
+
+# Get Logins
+$loginSplat = @{
+    SqlInstance = $locainstance
+}
+# Check the logins
+Get-DbaLogin @loginSplat |
+Select-Object SqlInstance, Name, LoginType
+
+# Get Processes
+$processSplat = @{
+    SqlInstance = $locainstance
+    Database    = "DBAutil"
+}
+Get-DbaProcess @processSplat |
+Select-Object Host, login, Program
+
+# Kill Processes in the source server
+Get-DbaProcess @processSplat | Stop-DbaProcess
+
+## Migrate login
+$migrateLoginSplat = @{
+    Source      = $locainstance
+    Destination = $namedinstance
+}
+Copy-DbaLogin @migrateLoginSplat
+
+## Migrate the databases
+$migrateDbSplat = @{
+    Source           = $locainstance
+    Destination      =  $namedinstance
+    Database         = $dbs.name
+    BackupRestore    = $true
+    SharedPath       = 'B:\migration'
+    SetSourceOffline = $true #you can check this. this will turn DBs offline after the Backup restore. 
+}
+Copy-DbaDatabase @migrateDbSplat
+
+## upgrade compat level & check all is ok
+$compatSplat = @{
+    SqlInstance = $namedinstance
+}
+Get-DbaDbCompatibility @compatSplat |
+Select-Object SqlInstance, Database, Compatibility
+
+$compatSplat.Add('Database', 'dbautil')
+$compatSplat.Add('Compatibility', 'Version160') # REQUIRES dbatools 2.0 and the new SMO
+
+Set-DbaDbCompatibility @compatSplat -Verbose
+
+## Upgrade database - https://thomaslarock.com/2014/06/upgrading-to-sql-server-2014-a-dozen-things-to-check/
+# Updates compatibility level
+# runs CHECKDB with data_purity - make sure column values are in range, e.g. datetime
+# DBCC updateusage
+# sp_updatestats
+# sp_refreshview against all user views
+$upgradeSplat = @{
+    SqlInstance = $namedinstance
+    Database    = "dbautil", "classroom"
+}
+Invoke-DbaDbUpgrade @upgradeSplat -Force
