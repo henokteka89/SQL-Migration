@@ -1,0 +1,74 @@
+##########################################################
+#                                                        #
+#                     Migrations                         #
+#          Simplify migration with PS commands           #
+#                                                        #
+##########################################################
+
+
+# Define source and destination server names
+$SourceServer = "hek"
+$DestinationServer = "hek\testenv"
+
+# Transfer all databases
+# Copy-DbaDatabase -Source $SourceServer -Destination $DestinationServer -BackupRestore -NetworkShare \\shared\network\path
+
+# Transfer all logins
+Copy-DbaLogin -Source $SourceServer -Destination $DestinationServer -force
+
+# Transfer SQL Agent jobs
+Copy-DbaAgentJob -Source $SourceServer -Destination $DestinationServer
+
+# Transfer linked servers
+Copy-DbaLinkedServer -Source $SourceServer -Destination $DestinationServer  
+
+# Transfer SQL Server configurations
+Copy-DbaSpConfigure -Source $SourceServer -Destination $DestinationServer
+
+ # Transfer credentials
+Copy-DbaCredential -Source $SourceServer -Destination $DestinationServer
+
+# Transfer endpoints
+Copy-DbaEndpoint -Source $SourceServer -Destination $DestinationServer
+
+# Transfer alerts
+Copy-DbaAgentAlert -Source $SourceServer -Destination $DestinationServer
+
+# Transfer operators
+Copy-DbaAgentOperator -Source $SourceServer -Destination $DestinationServer
+
+# Transfer Database Mail configurations
+Copy-DbaDbMail -Source $SourceServer -Destination $DestinationServer
+
+# Transfer SQL Agent categories for Jobs, Operators and Alerts  
+Copy-DbaAgentJobCategory -Source $SourceServer -Destination $DestinationServer
+
+# Transfer proxy accounts
+Copy-DbaAgentProxy -Source $SourceServer -Destination $DestinationServer
+
+# Transfer all of the SQL Agent properties (job history max rows, DBMail profile name, etc.).
+Copy-DbaAgentServer -Source $SourceServer -Destination $DestinationServer
+
+# Transfer server audits
+Copy-DbaInstanceAudit -Source $SourceServer -Destination $DestinationServer
+
+# Transfer server audit specifications
+Copy-DbaInstanceAuditSpecification -Source $SourceServer -Destination $DestinationServer
+
+# Transfer policy-based management policies (all policies and conditions)
+Copy-DbaPolicyManagement -Source $SourceServer -Destination $DestinationServer
+
+# Transfer extended events sessions
+Copy-DbaXESession -Source $SourceServer -Destination $DestinationServer
+
+# Transfer resource governor configurations
+Copy-DbaResourceGovernor -Source $SourceServer -Destination $DestinationServer
+
+# Transfer database user mappings (the permission part)
+Sync-DbaLoginPermission -Source $SourceServer -Destination $DestinationServer
+
+# Transfer server-level triggers
+Copy-DbaInstanceTrigger -Source $SourceServer -Destination $DestinationServer
+
+# Transfer  Folders, SSIS projects, and environments (if applicable)
+Copy-DbaSsisCatalog -Source $SourceServer -Destination $DestinationServer

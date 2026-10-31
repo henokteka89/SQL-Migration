@@ -1,0 +1,5 @@
+-- Creates a new inbound firewall rule for a SQL Server instance and adds the rule to the target computer.
+New-DbaFirewallRule -SqlInstance HEN
+
+--Returns just the port number for the default instance  
+Get-DbaTcpPort -SqlInstance HEN 

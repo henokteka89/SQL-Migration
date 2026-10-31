@@ -1,0 +1,1 @@
+ Get-DbaTopResourceUsage -SqlInstance henok | Out-GridView
