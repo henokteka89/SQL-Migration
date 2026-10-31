@@ -1,0 +1,30 @@
+Linked server
+
+Setting up a linked server between two SQL Server instances (henok and henok\test) 
+
+1. Create the Linked Server:
+•	In SSMS, expand the Server Objects node in Object Explorer.
+•	Right-click Linked Servers and choose New Linked Server.
+ 
+2. Linked Server Properties:
+•	Linked Server: Enter the name for the linked server. This can be any name you choose.
+•	Server Type: Choose SQL Server.
+•	Server Name: Enter Henok\Test (the name of the instance you want to link to).
+     
+3. Security: Configure the security settings under the Security tab.
+•	Be made using this security context: Use this if you want to specify a SQL Server login for the connection. Provide the login and password for a user on henok\test.
+•	Impersonate: This option allows the linked server to use the credentials of the currently connected user. This requires that the user has access to both instances.
+
+The SQL LOGIN must exist in the destination (henok\test) with necessary permissions to access database. If it is given db_reader permission to admin database, it can’t do write. If the permission is only for admin database, it can’t access other databases. 
+  
+4. SERVER Options: Adjust provider options under the Server Options tab.
+•	Ensure that Data Access, RPC and RPC Out are set to True if you plan to run stored procedures on the remote server.
+ 
+Test the Connection: After configuring the linked server, test the connection by expanding the linked server node in Object Explorer or running a test query.
+ 
+Test with a Simple Query:
+SELECT * FROM [LinkedServerName].[DatabaseName].[SchemaName].[TableName]
+
+Troubleshooting
+Problem: server ABC\TESTENV' is not configured for DATA ACCESS.
+Solution: Go to SERVER Options and enable “Data Access” by changing it to TRUE.
