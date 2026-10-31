@@ -1,0 +1,7 @@
+ declare @type varchar(20) = 'READ_WRITE'
+  --declare @type varchar(20) = 'READ_ONLY'
+select 
+'EXEC sp_resetstatus '''+NAME+'''
+ ALTER DATABASE ['+NAME+'] SET ' + @type + ' WITH ROLLBACK IMMEDIATE' 
+from sys.databases where database_id>4 and name <>'distribution' 
+and state_desc = 'online'

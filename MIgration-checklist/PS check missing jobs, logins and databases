@@ -1,0 +1,63 @@
+# PS check missing jobs, logins and databases
+
+# Define the two servers
+$ServerA = "SVR1"
+$ServerB = "SVR2"
+
+# Function to get databases, logins, and jobs
+function Get-SQLData {
+    param (
+        [string]$ServerName
+    )
+
+    # Get databases
+    $Databases = Invoke-Sqlcmd -ServerInstance $ServerName -Query "SELECT name FROM sys.databases WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb', 'distribution')" | Select-Object -ExpandProperty name
+
+    # Get logins
+    $Logins = Invoke-Sqlcmd -ServerInstance $ServerName -Query "SELECT name FROM sys.server_principals WHERE type = 'S'" | Select-Object -ExpandProperty name
+
+    # Get jobs
+    $Jobs = Invoke-Sqlcmd -ServerInstance $ServerName -Query "SELECT name FROM msdb.dbo.sysjobs" | Select-Object -ExpandProperty name
+
+    return [pscustomobject]@{
+        Databases = $Databases
+        Logins = $Logins
+        Jobs = $Jobs
+    }
+}
+
+# Get data from both servers
+$ServerAData = Get-SQLData -ServerName $ServerA
+$ServerBData = Get-SQLData -ServerName $ServerB
+
+# Compare Databases
+$MissingDatabases = Compare-Object -ReferenceObject $ServerAData.Databases -DifferenceObject $ServerBData.Databases -PassThru
+
+if ($MissingDatabases) {
+    Write-Host "--- Databases Missing in Either Server ---"
+    $MissingDatabases | Out-GridView -Title "Databases missing in $ServerA or $ServerB"
+} else {
+    Write-Host "All databases match between $ServerA and $ServerB."
+}
+
+# Compare Logins
+$MissingLogins = Compare-Object -ReferenceObject $ServerAData.Logins -DifferenceObject $ServerBData.Logins -PassThru
+
+if ($MissingLogins) {
+    Write-Host "--- Logins Missing in Either Server ---"
+    $MissingLogins | Out-GridView -Title "Logins missing in $ServerA or $ServerB"
+} else {
+    Write-Host "All logins match between $ServerA and $ServerB."
+}
+
+# Compare Jobs
+$MissingJobs = Compare-Object -ReferenceObject $ServerAData.Jobs -DifferenceObject $ServerBData.Jobs -PassThru
+
+if ($MissingJobs) {
+    Write-Host "--- Jobs Missing in Either Server ---"
+    $MissingJobs | Out-GridView -Title "Jobs missing in $ServerA or $ServerB"
+} else {
+    Write-Host "All jobs match between $ServerA and $ServerB."
+}
+
+Write-Host "--- Comparison Completed ---"

@@ -1,0 +1,28 @@
+SELECT
+    name AS DatabaseName,
+    state_desc AS State,
+    recovery_model_desc AS RecoveryModel,
+    compatibility_level AS CompatibilityLevel,
+    is_read_only AS IsReadOnly,
+    page_verify_option_desc AS PageVerifyOption,
+    is_auto_close_on AS AutoClose,
+    is_auto_shrink_on AS AutoShrink,
+    is_auto_update_stats_on AS AutoUpdateStats,
+    is_auto_update_stats_async_on AS AutoUpdateStatsAsync,
+    is_ansi_null_default_on AS AnsiNullDefault,
+    is_ansi_nulls_on AS AnsiNulls,
+    is_ansi_padding_on AS AnsiPadding,
+    is_ansi_warnings_on AS AnsiWarnings,
+    is_arithabort_on AS ArithAbort,
+    is_concat_null_yields_null_on AS ConcatNullYieldsNull,
+    is_numeric_roundabort_on AS NumericRoundAbort,
+    is_quoted_identifier_on AS QuotedIdentifier
+FROM sys.databases
+WHERE name = 'admin';
+
+
+SELECT name, 
+       value_in_use AS ValueInUse, 
+       description
+FROM sys.configurations
+ORDER BY name;

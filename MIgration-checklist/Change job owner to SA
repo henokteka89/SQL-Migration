@@ -1,0 +1,30 @@
+USE msdb;
+GO
+
+DECLARE @JobName NVARCHAR(128);
+DECLARE @SQL NVARCHAR(MAX);
+
+-- Cursor to loop through all jobs
+DECLARE job_cursor CURSOR FOR
+SELECT name
+FROM sysjobs
+WHERE owner_sid <> 0x01;  -- Exclude jobs already owned by 'sa'
+
+OPEN job_cursor;
+FETCH NEXT FROM job_cursor INTO @JobName;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Build the dynamic SQL to change the job owner to 'sa'
+    SET @SQL = 'EXEC msdb.dbo.sp_update_job @job_name = ''' + @JobName + ''', @owner_login_name = ''sa'';';
+    
+    -- Execute the dynamic SQL
+    EXEC sp_executesql @SQL;
+
+    FETCH NEXT FROM job_cursor INTO @JobName;
+END
+
+-- Clean up the cursor
+CLOSE job_cursor;
+DEALLOCATE job_cursor;
+GO

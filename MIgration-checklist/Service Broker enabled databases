@@ -1,0 +1,42 @@
+DECLARE @dbName NVARCHAR(128)
+DECLARE @sql NVARCHAR(MAX)
+
+-- Initialize a table to store the generated SQL commands
+IF OBJECT_ID('tempdb..#Commands') IS NOT NULL
+    DROP TABLE #Commands
+
+CREATE TABLE #Commands (
+    Command NVARCHAR(MAX)
+)
+
+-- Cursor to iterate over all user databases
+DECLARE db_cursor CURSOR FOR
+SELECT name
+from sys.databases where is_broker_enabled = 1
+and database_id>4 and name <>'distribution'
+ 
+
+OPEN db_cursor
+FETCH NEXT FROM db_cursor INTO @dbName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Build the SQL command to change the compatibility level to 160
+    SET @sql = 'ALTER DATABASE [' + @dbName + '] SET ENABLE_BROKER;'
+
+    -- Insert the command into the temporary table
+    INSERT INTO #Commands (Command)
+    VALUES (@sql)
+
+    FETCH NEXT FROM db_cursor INTO @dbName
+END
+
+CLOSE db_cursor
+DEALLOCATE db_cursor
+
+-- Select the generated commands
+SELECT Command
+FROM #Commands
+
+-- Optional: Drop the temporary table
+ DROP TABLE #Commands
